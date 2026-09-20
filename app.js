@@ -75,9 +75,12 @@ function translatePage(lang){
   nodes.forEach(n=>{
     if(n.parentElement && ['SCRIPT','STYLE','OPTION'].includes(n.parentElement.tagName)) return;
     const raw=n.nodeValue, key=normalizeText(raw);
-    if(dict[key]!==undefined){
+    if(!n.__rdapOriginal) n.__rdapOriginal=key;
+    const original=n.__rdapOriginal;
+    const target=(RDAP_I18N[lang]||RDAP_I18N.pt)[original];
+    if(target!==undefined){
       const lead=(raw.match(/^\s*/)||[''])[0], trail=(raw.match(/\s*$/)||[''])[0];
-      n.nodeValue=lead+dict[key]+trail;
+      n.nodeValue=lead+target+trail;
     }
   });
   document.querySelectorAll('input[placeholder]').forEach(el=>{
@@ -88,22 +91,17 @@ function translatePage(lang){
   document.querySelectorAll('[data-rdap-lang]').forEach(s=>s.value=lang);
   localStorage.setItem('rdap-language',lang);
 }
-function addLanguageSelector(){
-  const lang=localStorage.getItem('rdap-language')||'pt';
-  const sel=document.createElement('select');
-  sel.setAttribute('data-rdap-lang','');
-  sel.className='pill';
-  sel.style.cursor='pointer';
-  sel.style.fontWeight='700';
-  sel.innerHTML='<option value="pt">🇧🇷 Português</option><option value="es">🇪🇸 Español</option><option value="en">🇺🇸 English</option>';
-  sel.value=lang;
-  sel.addEventListener('change',e=>location.reload(localStorage.setItem('rdap-language',e.target.value)));
-  const top=document.querySelector('.top-actions');
-  if(top) top.insertBefore(sel,top.firstChild);
-  else {
-    const host=document.querySelector('.login-form');
-    if(host){sel.style.position='absolute';sel.style.top='20px';sel.style.right='20px';host.style.position='relative';host.appendChild(sel);}
-  }
+function wireLanguageSelectors(){
+  const current=localStorage.getItem('rdap-language')||'pt';
+  document.querySelectorAll('[data-rdap-lang]').forEach(sel=>{
+    sel.value=current;
+    sel.addEventListener('change',e=>{
+      const lang=e.target.value;
+      localStorage.setItem('rdap-language',lang);
+      translatePage(lang);
+      document.querySelectorAll('[data-rdap-lang]').forEach(s=>s.value=lang);
+    });
+  });
 }
-addLanguageSelector();
+wireLanguageSelectors();
 translatePage(localStorage.getItem('rdap-language')||'pt');
